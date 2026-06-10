@@ -281,7 +281,7 @@ Implementação: `app/infrastructure/integrations/mock_engine_ia.py`.
 
 ---
 
-## Próximos passos sugeridos
+## Próximos passos ?
 
 1. Gerar e aplicar migração Alembic + script de seed
 2. Endpoints `/auth/login` e `/auth/register`
@@ -290,7 +290,3 @@ Implementação: `app/infrastructure/integrations/mock_engine_ia.py`.
 5. Testes de integração com PostgreSQL (pytest + container ou DB local)
 
 ---
-
-## Licença
-
-A definir pelo proprietário do projeto.
