@@ -66,7 +66,7 @@ API back-end da **Plataforma Gamificada para o Ensino de Programação**. O cód
 ### Alembic (`alembic/`)
 
 - Configuração pronta (`env.py` aponta para os modelos SQLAlchemy)
-- **Ainda não há revision inicial gerada** — ver secção [Banco de dados](#banco-de-dados)
+> **Ainda não há revision inicial gerada** — ver secção [Banco de dados](#banco-de-dados)
 
 ---
 
