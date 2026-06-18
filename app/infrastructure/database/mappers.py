@@ -4,6 +4,7 @@ from app.domain.entities import (
     BadgeConquistada,
     Correcao,
     Missao,
+    Professor,
     Submissao,
 )
 from app.domain.enums import PerfilUsuario
@@ -107,6 +108,17 @@ def badge_conquistada_model_para_entidade(
         aluno_id=model.aluno_id,
         badge_id=model.badge_id,
         conquistado_em=model.conquistado_em,
+    )
+
+
+def usuario_model_para_professor(model: UsuarioModel) -> Professor:
+    return Professor(
+        id=model.id,
+        username=model.username,
+        email=model.email,
+        senha_hash=model.senha_hash,
+        perfil=PerfilUsuario.PROFESSOR,
+        departamento=model.departamento,
     )
 
 

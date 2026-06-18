@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.domain.entities import Submissao
@@ -35,6 +36,21 @@ class SqlAlchemySubmissaoRepository:
         if model is None:
             return None
         return submissao_model_para_entidade(model)
+
+    def listar_por_aluno(
+        self, aluno_id: UUID, offset: int = 0, limit: int = 20
+    ) -> tuple[list[Submissao], int]:
+        query = self._session.query(SubmissaoModel).filter(
+            SubmissaoModel.aluno_id == aluno_id
+        )
+        total = query.with_entities(func.count(SubmissaoModel.id)).scalar() or 0
+        models = (
+            query.order_by(SubmissaoModel.criado_em.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+        return [submissao_model_para_entidade(m) for m in models], int(total)
 
     def salvar(self, submissao: Submissao) -> Submissao:
         model = self._session.get(SubmissaoModel, submissao.id)

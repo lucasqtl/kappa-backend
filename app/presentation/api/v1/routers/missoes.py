@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.application.use_cases.avaliar_submissao import AvaliarSubmissaoUseCase
 from app.application.use_cases.criar_missao import CriarMissaoUseCase
@@ -11,18 +11,45 @@ from app.domain.exceptions import (
     InvalidStateTransitionError,
     UnauthorizedActionError,
 )
+from app.domain.enums import StatusMissao
+from app.infrastructure.repositories.sqlalchemy_missao_repository import (
+    SqlAlchemyMissaoRepository,
+)
 from app.presentation.dependencies import (
     get_avaliar_submissao_use_case,
     get_criar_missao_use_case,
+    get_missao_repo,
     get_submeter_codigo_use_case,
 )
-from app.presentation.schemas.missao import CriarMissaoRequest, MissaoResponse
+from app.presentation.schemas.missao import (
+    AtualizarMissaoRequest,
+    CriarMissaoRequest,
+    MissaoListResponse,
+    MissaoResponse,
+    PatchMissaoStatusRequest,
+)
 from app.presentation.schemas.submissao import (
     SubmissaoResultadoResponse,
     SubmeterCodigoRequest,
 )
 
 router = APIRouter(prefix="/missoes", tags=["Missões"])
+
+
+def _map_missao(missao) -> MissaoResponse:
+    return MissaoResponse(
+        id=missao.id,
+        titulo=missao.titulo,
+        descricao=missao.descricao,
+        dificuldade=missao.dificuldade.value,
+        xp_recompensa=missao.xp_recompensa,
+        status=missao.status.value,
+        badge_id_recompensa=missao.badge_id_recompensa,
+        data_inicio=missao.data_inicio,
+        deadline=missao.deadline,
+        trilha_id=missao.trilha_id,
+        ordem=missao.ordem,
+    )
 
 
 @router.post(
@@ -47,16 +74,131 @@ def criar_missao(
         trilha_id=body.trilha_id,
         ordem=body.ordem,
     )
-    return MissaoResponse(
-        id=missao.id,
-        titulo=missao.titulo,
-        descricao=missao.descricao,
-        dificuldade=missao.dificuldade.value,
-        xp_recompensa=missao.xp_recompensa,
-        status=missao.status.value,
-        trilha_id=missao.trilha_id,
-        ordem=missao.ordem,
+    return _map_missao(missao)
+
+
+@router.get(
+    "",
+    response_model=MissaoListResponse,
+    summary="Listar missões (com filtros opcionais)",
+)
+def listar_missoes(
+    status_filtro: StatusMissao | None = Query(default=None, alias="status"),
+    trilha_id: str | None = Query(default=None),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=100),
+    repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
+) -> MissaoListResponse:
+    missoes, total = repo.listar(
+        status=status_filtro, trilha_id=trilha_id, offset=offset, limit=limit
     )
+    return MissaoListResponse(
+        items=[_map_missao(m) for m in missoes],
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/{missao_id}",
+    response_model=MissaoResponse,
+    summary="Detalhe de uma missão",
+)
+def obter_missao(
+    missao_id: UUID,
+    repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
+) -> MissaoResponse:
+    missao = repo.obter_por_id(missao_id)
+    if missao is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Missão não encontrada",
+        )
+    return _map_missao(missao)
+
+
+@router.put(
+    "/{missao_id}",
+    response_model=MissaoResponse,
+    summary="Atualizar missão",
+)
+def atualizar_missao(
+    missao_id: UUID,
+    body: AtualizarMissaoRequest,
+    repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
+) -> MissaoResponse:
+    missao = repo.obter_por_id(missao_id)
+    if missao is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Missão não encontrada",
+        )
+    if body.titulo is not None:
+        missao.titulo = body.titulo
+    if body.descricao is not None:
+        missao.descricao = body.descricao
+    if body.dificuldade is not None:
+        missao.dificuldade = body.dificuldade
+    if body.xp_recompensa is not None:
+        missao.xp_recompensa = body.xp_recompensa
+    if body.badge_id_recompensa is not None:
+        missao.badge_id_recompensa = body.badge_id_recompensa
+    if body.data_inicio is not None:
+        missao.data_inicio = body.data_inicio
+    if body.deadline is not None:
+        missao.deadline = body.deadline
+    if body.trilha_id is not None:
+        missao.trilha_id = body.trilha_id
+    if body.ordem is not None:
+        missao.ordem = body.ordem
+    missao = repo.salvar(missao)
+    return _map_missao(missao)
+
+
+@router.patch(
+    "/{missao_id}/status",
+    response_model=MissaoResponse,
+    summary="Alterar status da missão (state machine)",
+)
+def alterar_status_missao(
+    missao_id: UUID,
+    body: PatchMissaoStatusRequest,
+    repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
+) -> MissaoResponse:
+    missao = repo.obter_por_id(missao_id)
+    if missao is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Missão não encontrada",
+        )
+    try:
+        missao.alterar_status(body.novo_status)
+    except InvalidStateTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.message,
+        ) from exc
+    missao = repo.salvar(missao)
+    return _map_missao(missao)
+
+
+@router.delete(
+    "/{missao_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Deletar missão",
+)
+def deletar_missao(
+    missao_id: UUID,
+    repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
+) -> None:
+    missao = repo.obter_por_id(missao_id)
+    if missao is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Missão não encontrada",
+        )
+    repo.deletar(missao_id)
 
 
 @router.post(

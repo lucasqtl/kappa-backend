@@ -28,6 +28,20 @@ class SqlAlchemyBadgeRepository:
         )
         return [badge_conquistada_model_para_entidade(m) for m in models]
 
+    def listar_badges_detalhes(
+        self, aluno_id: UUID
+    ) -> list[tuple[Badge, BadgeConquistada]]:
+        rows = (
+            self._session.query(BadgeConquistadaModel, BadgeModel)
+            .join(BadgeModel, BadgeConquistadaModel.badge_id == BadgeModel.id)
+            .filter(BadgeConquistadaModel.aluno_id == aluno_id)
+            .all()
+        )
+        return [
+            (badge_model_para_entidade(badge), badge_conquistada_model_para_entidade(conquistada))
+            for conquistada, badge in rows
+        ]
+
     def conceder_badge(self, aluno_id: UUID, badge_id: UUID) -> BadgeConquistada:
         model = BadgeConquistadaModel(
             id=uuid4(),

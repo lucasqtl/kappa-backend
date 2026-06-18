@@ -1,6 +1,33 @@
+from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+
+
+class AlunoResponse(BaseModel):
+    id: UUID
+    username: str
+    email: str
+    nivel: int
+    xp_total: int
+    xp_semana: int
+    dias_ofensiva: int
+
+
+class AlunoListResponse(BaseModel):
+    items: list[AlunoResponse]
+    total: int
+    offset: int
+    limit: int
+
+
+class BadgeResponse(BaseModel):
+    badge_id: UUID
+    codigo: str
+    nome: str
+    descricao: str
+    icone_url: str | None = None
+    conquistado_em: datetime
 
 
 class ProgressoMissaoResponse(BaseModel):
@@ -19,6 +46,10 @@ class EntradaRankingResponse(BaseModel):
     username: str
     xp_total: int
     posicao: int
+
+
+class RankingResponse(BaseModel):
+    ranking: list[EntradaRankingResponse]
 
 
 class DashboardAlunoResponse(BaseModel):

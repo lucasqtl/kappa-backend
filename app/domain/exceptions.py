@@ -16,3 +16,7 @@ class InvalidStateTransitionError(DomainError):
 
 class UnauthorizedActionError(DomainError):
     """Ação não permitida para o perfil ou contexto atual."""
+
+
+class CredentialsError(DomainError):
+    """Credenciais inválidas."""

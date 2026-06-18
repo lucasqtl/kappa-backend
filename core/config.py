@@ -21,6 +21,7 @@ class Settings(BaseSettings):
 
     secret_key: str = "change-me-in-production"
     access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 7
     xp_por_nivel: int = 5000
 
 

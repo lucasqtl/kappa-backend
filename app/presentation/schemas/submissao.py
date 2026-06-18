@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -15,3 +16,20 @@ class SubmissaoResultadoResponse(BaseModel):
     level_up: bool
     novo_nivel: int | None = None
     mensagem: str
+
+
+class SubmissaoDetailResponse(BaseModel):
+    id: UUID
+    aluno_id: UUID
+    missao_id: UUID
+    conteudo_codigo: str
+    status: str
+    criado_em: datetime
+    atualizado_em: datetime
+
+
+class SubmissaoListResponse(BaseModel):
+    items: list[SubmissaoDetailResponse]
+    total: int
+    offset: int
+    limit: int

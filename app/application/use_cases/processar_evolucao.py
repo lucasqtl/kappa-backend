@@ -42,13 +42,10 @@ class ProcessarEvolucaoUseCase:
         aluno.xp_total += xp_ganho
         aluno.xp_semana += xp_ganho
 
-        level_up = False
-        if (
-            aluno.xp_total > 0
-            and aluno.xp_total % self.XP_POR_NIVEL == 0
-        ):
-            aluno.nivel += 1
-            level_up = True
+        nivel_novo = aluno.xp_total // self.XP_POR_NIVEL + 1
+        level_up = nivel_novo > aluno.nivel
+        if level_up:
+            aluno.nivel = nivel_novo
 
         if missao.badge_id_recompensa is not None:
             ja_tem = any(
