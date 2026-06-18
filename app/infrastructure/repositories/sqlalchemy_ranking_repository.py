@@ -41,5 +41,11 @@ class SqlAlchemyRankingRepository:
         ]
 
     def atualizar_entrada(self, aluno: Aluno) -> None:
-        # Ranking derivado de xp_total; persistência já feita pelo AlunoRepository.
-        pass
+        model = self._session.get(AlunoModel, aluno.id)
+        if model is None:
+            return
+        model.xp_total = aluno.xp_total
+        model.nivel = aluno.nivel
+        model.xp_semana = aluno.xp_semana
+        model.dias_ofensiva = aluno.dias_ofensiva
+        self._session.flush()
