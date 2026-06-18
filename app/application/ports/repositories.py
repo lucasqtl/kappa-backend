@@ -12,7 +12,7 @@ from app.domain.entities import (
     ProgressoMissao,
     Submissao,
 )
-from app.domain.enums import StatusMissao
+from app.domain.enums import DificuldadeMissao, StatusMissao
 
 
 class AlunoRepository(Protocol):
@@ -31,6 +31,15 @@ class MissaoRepository(Protocol):
     def obter_por_id(self, missao_id: UUID) -> Missao | None: ...
 
     def listar_ativas_por_trilha(self, trilha_id: str) -> list[Missao]: ...
+
+    def listar_todas(
+        self,
+        status: StatusMissao | None = None,
+        dificuldade: DificuldadeMissao | None = None,
+        trilha_id: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[Missao], int]: ...
 
     def listar(
         self,
