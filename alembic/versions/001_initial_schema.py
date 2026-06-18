@@ -18,17 +18,36 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE perfil_usuario AS ENUM ('ALUNO', 'PROFESSOR', 'GESTOR')")
-    op.execute("CREATE TYPE dificuldade_missao AS ENUM ('EASY', 'MEDIUM', 'BOSS')")
-    op.execute(
-        "CREATE TYPE status_missao AS ENUM "
-        "('EM_RASCUNHO', 'AGENDADA', 'ATIVA', 'EXPIRADA', 'SUSPENSA')"
+    perfil_usuario = postgresql.ENUM(
+        "ALUNO", "PROFESSOR", "GESTOR", name="perfil_usuario"
     )
-    op.execute(
-        "CREATE TYPE status_submissao AS ENUM "
-        "('EM_RASCUNHO', 'VALIDANDO', 'FALHA_COMPILACAO', 'FALHA_TESTE', "
-        "'PROCESSANDO_EVOLUCAO', 'LEVEL_UP', 'FINALIZADA')"
+    dificuldade_missao = postgresql.ENUM(
+        "EASY", "MEDIUM", "BOSS", name="dificuldade_missao"
     )
+    status_missao = postgresql.ENUM(
+        "EM_RASCUNHO",
+        "AGENDADA",
+        "ATIVA",
+        "EXPIRADA",
+        "SUSPENSA",
+        name="status_missao",
+    )
+    status_submissao = postgresql.ENUM(
+        "EM_RASCUNHO",
+        "VALIDANDO",
+        "FALHA_COMPILACAO",
+        "FALHA_TESTE",
+        "PROCESSANDO_EVOLUCAO",
+        "LEVEL_UP",
+        "FINALIZADA",
+        name="status_submissao",
+    )
+
+    bind = op.get_bind()
+    perfil_usuario.create(bind, checkfirst=True)
+    dificuldade_missao.create(bind, checkfirst=True)
+    status_missao.create(bind, checkfirst=True)
+    status_submissao.create(bind, checkfirst=True)
 
     op.create_table(
         "usuarios",
@@ -38,8 +57,10 @@ def upgrade() -> None:
         sa.Column("senha_hash", sa.String(255), nullable=False),
         sa.Column(
             "perfil",
-            sa.Enum(
-                "ALUNO", "PROFESSOR", "GESTOR",
+            postgresql.ENUM(
+                "ALUNO",
+                "PROFESSOR",
+                "GESTOR",
                 name="perfil_usuario",
                 create_type=False,
             ),
@@ -78,7 +99,13 @@ def upgrade() -> None:
         sa.Column("descricao", sa.Text(), nullable=False),
         sa.Column(
             "dificuldade",
-            sa.Enum("EASY", "MEDIUM", "BOSS", name="dificuldade_missao", create_type=False),
+            postgresql.ENUM(
+                "EASY",
+                "MEDIUM",
+                "BOSS",
+                name="dificuldade_missao",
+                create_type=False,
+            ),
             nullable=False,
         ),
         sa.Column("xp_recompensa", sa.Integer(), nullable=False),
@@ -92,8 +119,12 @@ def upgrade() -> None:
         sa.Column("deadline", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "status",
-            sa.Enum(
-                "EM_RASCUNHO", "AGENDADA", "ATIVA", "EXPIRADA", "SUSPENSA",
+            postgresql.ENUM(
+                "EM_RASCUNHO",
+                "AGENDADA",
+                "ATIVA",
+                "EXPIRADA",
+                "SUSPENSA",
                 name="status_missao",
                 create_type=False,
             ),
@@ -121,9 +152,14 @@ def upgrade() -> None:
         sa.Column("conteudo_codigo", sa.Text(), nullable=False, server_default=""),
         sa.Column(
             "status",
-            sa.Enum(
-                "EM_RASCUNHO", "VALIDANDO", "FALHA_COMPILACAO", "FALHA_TESTE",
-                "PROCESSANDO_EVOLUCAO", "LEVEL_UP", "FINALIZADA",
+            postgresql.ENUM(
+                "EM_RASCUNHO",
+                "VALIDANDO",
+                "FALHA_COMPILACAO",
+                "FALHA_TESTE",
+                "PROCESSANDO_EVOLUCAO",
+                "LEVEL_UP",
+                "FINALIZADA",
                 name="status_submissao",
                 create_type=False,
             ),
