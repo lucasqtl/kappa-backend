@@ -4,12 +4,14 @@ from uuid import UUID, uuid4
 from app.application.ports.repositories import MissaoRepository
 from app.domain.entities import Missao
 from app.domain.enums import DificuldadeMissao, StatusMissao
+from core.logging_config import log_use_case
 
 
 class CriarMissaoUseCase:
     def __init__(self, missao_repo: MissaoRepository) -> None:
         self._missao_repo = missao_repo
 
+    @log_use_case("CriarMissaoUseCase")
     def executar(
         self,
         titulo: str,

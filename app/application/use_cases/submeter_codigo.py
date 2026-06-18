@@ -12,6 +12,7 @@ from app.domain.entities import Submissao
 from app.domain.enums import StatusMissao, StatusSubmissao
 from app.domain.exceptions import EntityNotFoundError, UnauthorizedActionError
 from app.domain.state_machines import validar_transicao_submissao
+from core.logging_config import log_use_case
 
 
 class SubmeterCodigoUseCase:
@@ -29,6 +30,7 @@ class SubmeterCodigoUseCase:
         self._engine_ia = engine_ia
         self._processar_evolucao = processar_evolucao
 
+    @log_use_case("SubmeterCodigoUseCase")
     def executar(
         self,
         aluno_id: UUID,

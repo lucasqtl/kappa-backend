@@ -8,6 +8,7 @@ from app.application.ports.repositories import (
 )
 from app.domain.entities import Aluno
 from app.domain.exceptions import EntityNotFoundError
+from core.logging_config import log_use_case
 
 
 class ProcessarEvolucaoUseCase:
@@ -25,11 +26,8 @@ class ProcessarEvolucaoUseCase:
         self._badge_repo = badge_repo
         self._ranking_repo = ranking_repo
 
+    @log_use_case("ProcessarEvolucaoUseCase")
     def executar(self, aluno_id: UUID, missao_id: UUID) -> tuple[Aluno, int, bool]:
-        """
-        Adiciona XP, verifica level up, concede badge e atualiza ranking.
-        Retorna (aluno_atualizado, xp_ganho, level_up).
-        """
         aluno = self._aluno_repo.obter_por_id(aluno_id)
         if aluno is None:
             raise EntityNotFoundError(f"Aluno {aluno_id} não encontrado")

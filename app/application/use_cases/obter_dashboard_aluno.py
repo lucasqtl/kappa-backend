@@ -7,6 +7,7 @@ from app.application.ports.repositories import (
     RankingRepository,
 )
 from app.domain.exceptions import EntityNotFoundError
+from core.logging_config import log_use_case
 
 
 class ObterDashboardAlunoUseCase:
@@ -23,6 +24,7 @@ class ObterDashboardAlunoUseCase:
         self._progresso_repo = progresso_repo
         self._ranking_repo = ranking_repo
 
+    @log_use_case("ObterDashboardAlunoUseCase")
     def executar(self, aluno_id: UUID, trilha_id: str | None = None) -> DashboardAlunoDTO:
         aluno = self._aluno_repo.obter_por_id(aluno_id)
         if aluno is None:

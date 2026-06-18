@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 from app.application.ports.repositories import CorrecaoRepository, SubmissaoRepository
 from app.domain.entities import Correcao
 from app.domain.exceptions import EntityNotFoundError
+from core.logging_config import log_use_case
 
 
 class AvaliarSubmissaoUseCase:
@@ -14,6 +15,7 @@ class AvaliarSubmissaoUseCase:
         self._submissao_repo = submissao_repo
         self._correcao_repo = correcao_repo
 
+    @log_use_case("AvaliarSubmissaoUseCase")
     def executar(
         self,
         submissao_id: UUID,
