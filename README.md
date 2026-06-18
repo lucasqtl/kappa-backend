@@ -14,8 +14,57 @@ API REST da **Plataforma Gamificada para o Ensino de Programação**. Construíd
 | SQLAlchemy 2.0 | ORM |
 | Alembic | Migrações |
 | PostgreSQL | Banco de dados |
-| python-jose + passlib | JWT e hash de senhas |
-| Pytest | Testes unitários |
+| Pytest | Testes |
+| python-jose + passlib | Base para JWT e hash de senha (ainda não exposta em endpoints) |
+
+---
+
+## O que já existe
+
+### Camada de domínio (`app/domain/`)
+
+- **Entidades:** `Usuario`, `Aluno`, `Professor`, `Missao`, `Submissao`, `Correcao`, `Badge`, `BadgeConquistada`, `EntradaRanking`, `ProgressoMissao`
+- **Enums:** perfil (`ALUNO`, `PROFESSOR`, `GESTOR`), dificuldade (`EASY`, `MEDIUM`, `BOSS`), status de missão e submissão
+- **Máquinas de estado:** transições validadas em `state_machines.py` (ex.: `EM_RASCUNHO` → `VALIDANDO` → `PROCESSANDO_EVOLUCAO` → `FINALIZADA`)
+- **Exceções de domínio:** `EntityNotFoundError`, `InvalidStateTransitionError`, `UnauthorizedActionError`
+
+### Camada de aplicação (`app/application/`)
+
+- **Ports (Protocol):** repositórios (`Aluno`, `Missao`, `Submissao`, `Progresso`, `Ranking`, `Badge`, `Correcao`) e `EngineIA`
+- **Casos de uso implementados:**
+  - `ObterDashboardAlunoUseCase` — XP, nível, ofensiva, trilha de missões, ranking
+  - `SubmeterCodigoUseCase` — envia código, valida via Engine IA, dispara evolução
+  - `ProcessarEvolucaoUseCase` — XP, level up, badges, ranking
+  - `CriarMissaoUseCase` — missão em `EM_RASCUNHO` ou `AGENDADA`
+  - `AvaliarSubmissaoUseCase` — correção manual com nota e feedback
+
+### Infraestrutura (`app/infrastructure/`)
+
+- **Modelos SQLAlchemy** separados das entidades de domínio (`database/models.py`)
+- **Mappers** domínio ↔ ORM (`database/mappers.py`)
+- **Repositórios SQLAlchemy** para cada port
+- **`MockEngineIA`** — validação simulada para desenvolvimento (sem serviço externo real)
+
+### Apresentação (`app/presentation/`)
+
+- App FastAPI em `main.py`
+- Routers v1, schemas Pydantic, injeção de dependências (`dependencies.py`)
+
+### Core (`core/`)
+
+- `config.py` — `BaseSettings` (`.env`)
+- `database.py` — engine, sessão, `get_db`
+- `security.py` — hash de senha e JWT (preparado para auth futura)
+
+### Testes (`tests/`)
+
+- `test_state_machines.py` — transições de estado
+- `test_submeter_codigo_use_case.py` — fluxo de submissão com repositórios fake (8 testes)
+
+### Alembic (`alembic/`)
+
+- Configuração pronta (`env.py` aponta para os modelos SQLAlchemy)
+- **Ainda não há revision inicial gerada** — ver secção [Banco de dados](#banco-de-dados)
 
 ---
 
