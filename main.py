@@ -4,7 +4,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.domain.exceptions import DomainError
+from app.domain.exceptions import (
+    DomainError,
+    EntityNotFoundError,
+    InvalidStateTransitionError,
+    UnauthorizedActionError,
+)
 from app.presentation.api.v1.router import api_router
 from core.config import get_settings
 from core.database import engine
@@ -39,14 +44,26 @@ async def log_request_timing(request: Request, call_next):
     return response
 
 
+def _domain_status(exc: DomainError) -> int:
+    if isinstance(exc, EntityNotFoundError):
+        return 404
+    if isinstance(exc, InvalidStateTransitionError):
+        return 409
+    if isinstance(exc, UnauthorizedActionError):
+        return 403
+    return 400
+
+
 @app.exception_handler(DomainError)
 async def domain_error_handler(_request: Request, exc: DomainError) -> JSONResponse:
+    status_code = _domain_status(exc)
     logger.warning(
         "domain_error",
         error_type=type(exc).__name__,
         message=exc.message,
+        status_code=status_code,
     )
-    return JSONResponse(status_code=400, content={"detail": exc.message})
+    return JSONResponse(status_code=status_code, content={"detail": exc.message})
 
 
 @app.get("/health", tags=["Health"])
