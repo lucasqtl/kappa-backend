@@ -13,6 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 COPY --from=builder /install /usr/local
+COPY scripts ./scripts
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app

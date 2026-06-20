@@ -11,7 +11,7 @@ from app.domain.exceptions import (
     InvalidStateTransitionError,
     UnauthorizedActionError,
 )
-from app.domain.enums import StatusMissao
+from app.domain.enums import DificuldadeMissao, StatusMissao
 from app.infrastructure.repositories.sqlalchemy_missao_repository import (
     SqlAlchemyMissaoRepository,
 )
@@ -84,13 +84,18 @@ def criar_missao(
 )
 def listar_missoes(
     status_filtro: StatusMissao | None = Query(default=None, alias="status"),
+    dificuldade: DificuldadeMissao | None = Query(default=None),
     trilha_id: str | None = Query(default=None),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
 ) -> MissaoListResponse:
-    missoes, total = repo.listar(
-        status=status_filtro, trilha_id=trilha_id, offset=offset, limit=limit
+    missoes, total = repo.listar_todas(
+        status=status_filtro,
+        dificuldade=dificuldade,
+        trilha_id=trilha_id,
+        offset=offset,
+        limit=limit,
     )
     return MissaoListResponse(
         items=[_map_missao(m) for m in missoes],

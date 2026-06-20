@@ -4,7 +4,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.domain.entities import Missao
-from app.domain.enums import StatusMissao
+from app.domain.enums import DificuldadeMissao, StatusMissao
 from app.infrastructure.database.mappers import (
     missao_entidade_para_model,
     missao_model_para_entidade,
@@ -34,9 +34,10 @@ class SqlAlchemyMissaoRepository:
         )
         return [missao_model_para_entidade(m) for m in models]
 
-    def listar(
+    def listar_todas(
         self,
         status: StatusMissao | None = None,
+        dificuldade: DificuldadeMissao | None = None,
         trilha_id: str | None = None,
         offset: int = 0,
         limit: int = 20,
@@ -44,11 +45,27 @@ class SqlAlchemyMissaoRepository:
         query = self._session.query(MissaoModel)
         if status is not None:
             query = query.filter(MissaoModel.status == status)
+        if dificuldade is not None:
+            query = query.filter(MissaoModel.dificuldade == dificuldade)
         if trilha_id is not None:
             query = query.filter(MissaoModel.trilha_id == trilha_id)
         total = query.with_entities(func.count(MissaoModel.id)).scalar() or 0
         models = query.order_by(MissaoModel.ordem).offset(offset).limit(limit).all()
         return [missao_model_para_entidade(m) for m in models], int(total)
+
+    def listar(
+        self,
+        status: StatusMissao | None = None,
+        trilha_id: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[Missao], int]:
+        return self.listar_todas(
+            status=status,
+            trilha_id=trilha_id,
+            offset=offset,
+            limit=limit,
+        )
 
     def deletar(self, missao_id: UUID) -> None:
         model = self._session.get(MissaoModel, missao_id)
