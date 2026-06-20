@@ -24,11 +24,14 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://kappa:kappa@db:5432/kappa_db
-      SECRET_KEY: change-me-in-production
+      SECRET_KEY: change-me-before-deploy
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
       DEBUG: "false"
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

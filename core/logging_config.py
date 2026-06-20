@@ -64,7 +64,7 @@ def log_use_case(use_case_name: str) -> Callable[[F], F]:
             logger.info(
                 "use_case_invocation",
                 use_case=use_case_name,
-                args=_safe_repr(args),
+                args=_safe_repr(args[1:]),  # skip self
                 kwargs=_safe_repr(kwargs),
             )
             start = time.perf_counter()
