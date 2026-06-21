@@ -33,7 +33,7 @@ class ObterDashboardAlunoUseCase:
         trilha = trilha_id or self.TRILHA_PADRAO
         missoes = self._progresso_repo.listar_progresso_aluno(aluno_id, trilha)
         posicao = self._ranking_repo.obter_posicao_aluno(aluno_id)
-        ranking_top = self._ranking_repo.listar_top(limite=5)
+        ranking_top, _ = self._ranking_repo.listar_top(limit=5)
 
         return DashboardAlunoDTO(
             aluno_id=aluno.id,

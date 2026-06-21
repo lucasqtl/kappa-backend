@@ -11,8 +11,9 @@ from app.infrastructure.database.models import AlunoModel, UsuarioModel
 
 
 class SqlAlchemyAlunoRepository:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, auto_commit: bool = True) -> None:
         self._session = session
+        self._auto_commit = auto_commit
 
     def obter_por_id(self, aluno_id: UUID) -> Aluno | None:
         model = (
@@ -69,7 +70,10 @@ class SqlAlchemyAlunoRepository:
         self._session.add(usuario_model)
         self._session.flush()
         self._session.add(aluno_model)
-        self._session.commit()
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
         self._session.refresh(aluno_model)
         return usuario_model_para_aluno(aluno_model)
 
@@ -83,6 +87,9 @@ class SqlAlchemyAlunoRepository:
         if model is None:
             raise ValueError(f"Aluno {aluno.id} não existe no banco")
         aluno_para_model(aluno, model.usuario, model)
-        self._session.commit()
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
         self._session.refresh(model)
         return usuario_model_para_aluno(model)

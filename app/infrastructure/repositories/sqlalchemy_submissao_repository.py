@@ -12,8 +12,9 @@ from app.infrastructure.database.models import SubmissaoModel
 
 
 class SqlAlchemySubmissaoRepository:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, auto_commit: bool = True) -> None:
         self._session = session
+        self._auto_commit = auto_commit
 
     def obter_por_id(self, submissao_id: UUID) -> Submissao | None:
         model = self._session.get(SubmissaoModel, submissao_id)
@@ -65,6 +66,9 @@ class SqlAlchemySubmissaoRepository:
             self._session.add(model)
         else:
             submissao_entidade_para_model(submissao, model)
-        self._session.commit()
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
         self._session.refresh(model)
         return submissao_model_para_entidade(model)

@@ -50,6 +50,9 @@ class EntradaRankingResponse(BaseModel):
 
 class RankingResponse(BaseModel):
     ranking: list[EntradaRankingResponse]
+    total: int
+    offset: int
+    limit: int
 
 
 class DashboardAlunoResponse(BaseModel):

@@ -11,8 +11,9 @@ from app.infrastructure.database.models import BadgeConquistadaModel, BadgeModel
 
 
 class SqlAlchemyBadgeRepository:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, auto_commit: bool = True) -> None:
         self._session = session
+        self._auto_commit = auto_commit
 
     def obter_por_id(self, badge_id: UUID) -> Badge | None:
         model = self._session.get(BadgeModel, badge_id)
@@ -49,6 +50,9 @@ class SqlAlchemyBadgeRepository:
             badge_id=badge_id,
         )
         self._session.add(model)
-        self._session.commit()
+        if self._auto_commit:
+            self._session.commit()
+        else:
+            self._session.flush()
         self._session.refresh(model)
         return badge_conquistada_model_para_entidade(model)

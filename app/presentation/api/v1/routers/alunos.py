@@ -114,10 +114,11 @@ def listar_alunos(
     summary="Ranking global de alunos",
 )
 def obter_ranking(
-    limite: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=100),
     repo: SqlAlchemyRankingRepository = Depends(get_ranking_repo),
 ) -> RankingResponse:
-    entries = repo.listar_top(limite)
+    entries, total = repo.listar_top(offset=offset, limit=limit)
     return RankingResponse(
         ranking=[
             EntradaRankingResponse(
@@ -127,7 +128,10 @@ def obter_ranking(
                 posicao=e.posicao,
             )
             for e in entries
-        ]
+        ],
+        total=total,
+        offset=offset,
+        limit=limit,
     )
 
 

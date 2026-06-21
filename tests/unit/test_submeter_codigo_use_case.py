@@ -89,11 +89,30 @@ class FakeRankingRepo:
     def obter_posicao_aluno(self, aluno_id):
         return 1
 
-    def listar_top(self, limite=10):
-        return []
+    def listar_top(self, offset=0, limit=10):
+        return [], 0
 
     def atualizar_entrada(self, aluno):
         pass
+
+
+class FakeTransactionManager:
+    def __init__(self) -> None:
+        self.iniciada = False
+        self.confirmada = False
+
+    def begin(self):
+        manager = self
+
+        class _Transaction:
+            def __enter__(self):
+                manager.iniciada = True
+
+            def __exit__(self, exc_type, exc, traceback):
+                manager.confirmada = exc_type is None
+                return False
+
+        return _Transaction()
 
 
 def _aluno(xp: int = 4200) -> Aluno:
@@ -139,6 +158,29 @@ def test_submissao_aprovada_ganha_xp() -> None:
     assert aluno.xp_total == 4300
 
 
+def test_submissao_aprovada_roda_em_transacao() -> None:
+    aluno = _aluno()
+    missao = _missao_ativa()
+    aluno_repo = FakeAlunoRepo(aluno)
+    transaction_manager = FakeTransactionManager()
+    processar = ProcessarEvolucaoUseCase(
+        aluno_repo, FakeMissaoRepo(missao), FakeBadgeRepo(), FakeRankingRepo()
+    )
+    use_case = SubmeterCodigoUseCase(
+        aluno_repo,
+        FakeMissaoRepo(missao),
+        FakeSubmissaoRepo(),
+        FakeEngineAprovada(),
+        processar,
+        transaction_manager=transaction_manager,
+    )
+
+    use_case.executar(aluno.id, missao.id, "def validate(): pass")
+
+    assert transaction_manager.iniciada is True
+    assert transaction_manager.confirmada is True
+
+
 def test_submissao_falha_teste() -> None:
     aluno = _aluno()
     missao = _missao_ativa()
@@ -156,6 +198,37 @@ def test_submissao_falha_teste() -> None:
     resultado = use_case.executar(aluno.id, missao.id, "FAIL_TEST")
     assert resultado.status == StatusSubmissao.FALHA_TESTE.value
     assert resultado.xp_ganho == 0
+
+
+def test_retry_apos_falha_de_teste_reaproveita_submissao() -> None:
+    aluno = _aluno()
+    missao = _missao_ativa()
+    aluno_repo = FakeAlunoRepo(aluno)
+    submissao_repo = FakeSubmissaoRepo()
+    processar = ProcessarEvolucaoUseCase(
+        aluno_repo, FakeMissaoRepo(missao), FakeBadgeRepo(), FakeRankingRepo()
+    )
+    use_case_falha = SubmeterCodigoUseCase(
+        aluno_repo,
+        FakeMissaoRepo(missao),
+        submissao_repo,
+        FakeEngineFalha(),
+        processar,
+    )
+    primeira = use_case_falha.executar(aluno.id, missao.id, "FAIL_TEST")
+
+    use_case_sucesso = SubmeterCodigoUseCase(
+        aluno_repo,
+        FakeMissaoRepo(missao),
+        submissao_repo,
+        FakeEngineAprovada(),
+        processar,
+    )
+    segunda = use_case_sucesso.executar(aluno.id, missao.id, "def validate(): pass")
+
+    assert segunda.submissao_id == primeira.submissao_id
+    assert segunda.status == StatusSubmissao.FINALIZADA.value
+    assert aluno.xp_total == 4300
 
 
 def test_missao_inativa_rejeitada() -> None:

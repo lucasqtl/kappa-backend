@@ -22,23 +22,30 @@ class SqlAlchemyRankingRepository:
         )
         return int(acima or 0) + 1
 
-    def listar_top(self, limite: int = 10) -> list[EntradaRanking]:
+    def listar_top(
+        self, offset: int = 0, limit: int = 10
+    ) -> tuple[list[EntradaRanking], int]:
+        query = self._session.query(AlunoModel)
+        total = query.with_entities(func.count(AlunoModel.usuario_id)).scalar() or 0
         models = (
-            self._session.query(AlunoModel)
+            query
             .options(joinedload(AlunoModel.usuario))
             .order_by(AlunoModel.xp_total.desc())
-            .limit(limite)
+            .offset(offset)
+            .limit(limit)
             .all()
         )
-        return [
-            EntradaRanking(
-                aluno_id=m.usuario_id,
-                username=m.usuario.username,
-                xp_total=m.xp_total,
-                posicao=idx + 1,
+        ranking = []
+        for idx, model in enumerate(models):
+            ranking.append(
+                EntradaRanking(
+                    aluno_id=model.usuario_id,
+                    username=model.usuario.username,
+                    xp_total=model.xp_total,
+                    posicao=offset + idx + 1,
+                )
             )
-            for idx, m in enumerate(models)
-        ]
+        return ranking, int(total)
 
     def atualizar_entrada(self, aluno: Aluno) -> None:
         model = self._session.get(AlunoModel, aluno.id)
