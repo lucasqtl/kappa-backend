@@ -12,6 +12,7 @@ from app.domain.state_machines import (
     validar_transicao_missao,
     validar_transicao_submissao,
 )
+from app.domain.exceptions import DomainError
 
 
 @dataclass
@@ -86,6 +87,10 @@ class Correcao:
     nota: float
     feedback: str
     criado_em: datetime = field(default_factory=datetime.utcnow)
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.nota <= 10.0:
+            raise DomainError("Nota deve estar entre 0 e 10")
 
 
 @dataclass

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     app_name: str = "Plataforma Kappa API"
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
+    cors_allow_origins: str = "http://localhost:5173,http://localhost:3000"
 
     database_url: str = (
         "postgresql+psycopg2://kappa:kappa@localhost:5432/kappa_db"
@@ -23,6 +24,16 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 7
     xp_por_nivel: int = 5000
+
+    @property
+    def cors_origins(self) -> list[str]:
+        if self.debug:
+            return ["*"]
+        return [
+            origin.strip()
+            for origin in self.cors_allow_origins.split(",")
+            if origin.strip()
+        ]
 
 
 @lru_cache
