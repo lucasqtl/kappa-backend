@@ -5,7 +5,11 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
-import structlog
+try:
+    import structlog
+    _STRUCTLOG_AVAILABLE = True
+except ImportError:
+    _STRUCTLOG_AVAILABLE = False
 
 from app.domain.exceptions import DomainError
 from core.config import get_settings
@@ -26,6 +30,10 @@ def _safe_repr(value: Any, max_len: int = 200) -> Any:
 
 
 def setup_logging() -> None:
+    if not _STRUCTLOG_AVAILABLE:
+        logging.basicConfig(format="%(levelname)s %(name)s %(message)s", stream=sys.stdout)
+        return
+
     settings = get_settings()
     level = logging.DEBUG if settings.debug else logging.INFO
 
@@ -51,11 +59,18 @@ def setup_logging() -> None:
     )
 
 
-def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
-    return structlog.get_logger(name)
+def get_logger(name: str | None = None) -> Any:
+    if _STRUCTLOG_AVAILABLE:
+        return structlog.get_logger(name)
+    return logging.getLogger(name)
 
 
 def log_use_case(use_case_name: str) -> Callable[[F], F]:
+    if not _STRUCTLOG_AVAILABLE:
+        def _noop_decorator(func: F) -> F:
+            return func
+        return _noop_decorator
+
     logger = get_logger("use_case")
 
     def decorator(func: F) -> F:
@@ -64,7 +79,7 @@ def log_use_case(use_case_name: str) -> Callable[[F], F]:
             logger.info(
                 "use_case_invocation",
                 use_case=use_case_name,
-                args=_safe_repr(args[1:]),  # skip self
+                args=_safe_repr(args[1:]),
                 kwargs=_safe_repr(kwargs),
             )
             start = time.perf_counter()
