@@ -1,4 +1,8 @@
 services:
+
+  # ──────────────────────────────────────────────
+  # Kappa — banco principal
+  # ──────────────────────────────────────────────
   db:
     image: postgres:16
     environment:
@@ -16,6 +20,96 @@ services:
       retries: 5
       start_period: 10s
 
+  # ──────────────────────────────────────────────
+  # Judge0 — banco dedicado
+  # ──────────────────────────────────────────────
+  judge0-db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      POSTGRES_DB: judge0
+    volumes:
+      - judge0_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U judge0 -d judge0"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ──────────────────────────────────────────────
+  # Judge0 — fila Redis
+  # ──────────────────────────────────────────────
+  redis:
+    image: redis:6.0
+    command: redis-server --appendonly yes
+    volumes:
+      - judge0_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  # Judge0 — API server
+  # ──────────────────────────────────────────────
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    privileged: true
+    ports:
+      - "2358:2358"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: judge0-db
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      SECRET_KEY_BASE: troque-em-producao-judge0-secret
+      RAILS_ENV: production
+      ALLOW_ENABLE_WAIT_RESULT: "true"
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2358/health_check || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # ──────────────────────────────────────────────
+  # Judge0 — workers (executam o código isolado)
+  # Precisa de privileged para os namespaces Linux
+  # ──────────────────────────────────────────────
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    command: ["./scripts/workers"]
+    privileged: true
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      POSTGRES_HOST: judge0-db
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      SECRET_KEY_BASE: troque-em-producao-judge0-secret
+      RAILS_ENV: production
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # Kappa — aplicação
+  # ──────────────────────────────────────────────
   app:
     build:
       context: .
@@ -28,10 +122,17 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 60
       REFRESH_TOKEN_EXPIRE_DAYS: 7
       DEBUG: "false"
+      JUDGE0_BASE_URL: http://judge0-server:2358
+      JUDGE0_API_KEY: ""
+      JUDGE0_LANGUAGE_ID: "71"
     depends_on:
       db:
+        condition: service_healthy
+      judge0-server:
         condition: service_healthy
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  judge0_db:
+  judge0_redis:
