@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from uuid import UUID, uuid4
 
 from app.application.dto import SubmissaoResultadoDTO
@@ -6,6 +7,7 @@ from app.application.ports.repositories import (
     AlunoRepository,
     MissaoRepository,
     SubmissaoRepository,
+    TransactionManager,
 )
 from app.application.use_cases.processar_evolucao import ProcessarEvolucaoUseCase
 from app.domain.entities import Submissao
@@ -23,15 +25,37 @@ class SubmeterCodigoUseCase:
         submissao_repo: SubmissaoRepository,
         engine_ia: EngineIA,
         processar_evolucao: ProcessarEvolucaoUseCase,
+        transaction_manager: TransactionManager | None = None,
     ) -> None:
         self._aluno_repo = aluno_repo
         self._missao_repo = missao_repo
         self._submissao_repo = submissao_repo
         self._engine_ia = engine_ia
         self._processar_evolucao = processar_evolucao
+        self._transaction_manager = transaction_manager
 
     @log_use_case("SubmeterCodigoUseCase")
     def executar(
+        self,
+        aluno_id: UUID,
+        missao_id: UUID,
+        conteudo_codigo: str,
+        submissao_id: UUID | None = None,
+    ) -> SubmissaoResultadoDTO:
+        transaction = (
+            self._transaction_manager.begin()
+            if self._transaction_manager is not None
+            else nullcontext()
+        )
+        with transaction:
+            return self._executar(
+                aluno_id=aluno_id,
+                missao_id=missao_id,
+                conteudo_codigo=conteudo_codigo,
+                submissao_id=submissao_id,
+            )
+
+    def _executar(
         self,
         aluno_id: UUID,
         missao_id: UUID,
@@ -115,12 +139,22 @@ class SubmeterCodigoUseCase:
                 raise EntityNotFoundError(f"Submissão {submissao_id} não encontrada")
             if submissao.aluno_id != aluno_id:
                 raise UnauthorizedActionError("Submissão não pertence ao aluno")
+            if submissao.status in (
+                StatusSubmissao.FALHA_COMPILACAO,
+                StatusSubmissao.FALHA_TESTE,
+            ):
+                submissao.alterar_status(StatusSubmissao.EM_RASCUNHO)
             return submissao
 
         existente = self._submissao_repo.obter_por_aluno_e_missao(aluno_id, missao_id)
         if existente is not None:
             if existente.status == StatusSubmissao.FINALIZADA:
                 raise UnauthorizedActionError("Missão já concluída")
+            if existente.status in (
+                StatusSubmissao.FALHA_COMPILACAO,
+                StatusSubmissao.FALHA_TESTE,
+            ):
+                existente.alterar_status(StatusSubmissao.EM_RASCUNHO)
             return existente
 
         return Submissao(

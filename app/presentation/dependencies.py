@@ -12,6 +12,7 @@ from app.application.use_cases.obter_dashboard_aluno import ObterDashboardAlunoU
 from app.application.use_cases.processar_evolucao import ProcessarEvolucaoUseCase
 from app.application.use_cases.submeter_codigo import SubmeterCodigoUseCase
 from app.domain.entities import Aluno
+from app.infrastructure.database.unit_of_work import SqlAlchemyTransactionManager
 from app.infrastructure.integrations.mock_engine_ia import MockEngineIA
 from app.infrastructure.repositories.sqlalchemy_aluno_repository import (
     SqlAlchemyAlunoRepository,
@@ -127,10 +128,10 @@ def get_obter_dashboard_use_case(
 def get_submeter_codigo_use_case(
     db: Session = Depends(get_db),
 ) -> SubmeterCodigoUseCase:
-    aluno_repo = SqlAlchemyAlunoRepository(db)
-    missao_repo = SqlAlchemyMissaoRepository(db)
-    submissao_repo = SqlAlchemySubmissaoRepository(db)
-    badge_repo = SqlAlchemyBadgeRepository(db)
+    aluno_repo = SqlAlchemyAlunoRepository(db, auto_commit=False)
+    missao_repo = SqlAlchemyMissaoRepository(db, auto_commit=False)
+    submissao_repo = SqlAlchemySubmissaoRepository(db, auto_commit=False)
+    badge_repo = SqlAlchemyBadgeRepository(db, auto_commit=False)
     ranking_repo = SqlAlchemyRankingRepository(db)
     processar_evolucao = ProcessarEvolucaoUseCase(
         aluno_repo=aluno_repo,
@@ -144,6 +145,7 @@ def get_submeter_codigo_use_case(
         submissao_repo=submissao_repo,
         engine_ia=MockEngineIA(),
         processar_evolucao=processar_evolucao,
+        transaction_manager=SqlAlchemyTransactionManager(db),
     )
 
 

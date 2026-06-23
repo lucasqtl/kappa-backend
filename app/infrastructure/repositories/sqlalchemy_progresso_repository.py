@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.domain.entities import ProgressoMissao
 from app.domain.enums import StatusMissao, StatusSubmissao
 from app.infrastructure.database.mappers import missao_model_para_entidade
+from app.infrastructure.database.mission_status import sincronizar_status_missoes_por_datas
 from app.infrastructure.database.models import MissaoModel, SubmissaoModel
 
 
@@ -15,6 +16,7 @@ class SqlAlchemyProgressoMissaoRepository:
     def listar_progresso_aluno(
         self, aluno_id: UUID, trilha_id: str | None = None
     ) -> list[ProgressoMissao]:
+        sincronizar_status_missoes_por_datas(self._session)
         query = self._session.query(MissaoModel).order_by(MissaoModel.ordem)
         if trilha_id:
             query = query.filter(MissaoModel.trilha_id == trilha_id)

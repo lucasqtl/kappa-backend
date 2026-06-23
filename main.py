@@ -1,6 +1,8 @@
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
@@ -27,6 +29,12 @@ app = FastAPI(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/lab", include_in_schema=False)
+def backend_lab() -> FileResponse:
+    return FileResponse(Path(__file__).with_name("index.html"))
 
 
 @app.middleware("http")

@@ -1,3 +1,4 @@
+from contextlib import AbstractContextManager
 from typing import Protocol
 from uuid import UUID
 
@@ -77,7 +78,9 @@ class ProgressoMissaoRepository(Protocol):
 class RankingRepository(Protocol):
     def obter_posicao_aluno(self, aluno_id: UUID) -> int | None: ...
 
-    def listar_top(self, limite: int = 10) -> list[EntradaRanking]: ...
+    def listar_top(
+        self, offset: int = 0, limit: int = 10
+    ) -> tuple[list[EntradaRanking], int]: ...
 
     def atualizar_entrada(self, aluno: Aluno) -> None: ...
 
@@ -102,3 +105,7 @@ class ProfessorRepository(Protocol):
     def obter_por_id(self, professor_id: UUID) -> Professor | None: ...
 
     def criar(self, professor: Professor) -> Professor: ...
+
+
+class TransactionManager(Protocol):
+    def begin(self) -> AbstractContextManager[None]: ...

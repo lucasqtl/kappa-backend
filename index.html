@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kappa Backend Lab</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #20242a;
+      --muted: #626b78;
+      --line: #d9dee7;
+      --accent: #1f6feb;
+      --ok: #137333;
+      --warn: #a15c00;
+      --bad: #b3261e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    header {
+      background: #101820;
+      color: white;
+      padding: 20px 24px;
+      border-bottom: 4px solid var(--accent);
+    }
+
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    header p {
+      margin: 0;
+      color: #d8dee9;
+      font-size: 14px;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 20px auto 48px;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(16, 24, 32, 0.05);
+    }
+
+    .span-12 { grid-column: span 12; }
+    .span-7 { grid-column: span 7; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      font: inherit;
+      background: white;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 132px;
+      resize: vertical;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #44546a;
+    }
+
+    button.warn {
+      background: var(--warn);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: #eef2f7;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      margin: 0 6px 6px 0;
+    }
+
+    .pill.ok { color: var(--ok); background: #e9f6ed; }
+    .pill.bad { color: var(--bad); background: #fcebea; }
+    .pill.warn { color: var(--warn); background: #fff4df; }
+
+    pre {
+      margin: 0;
+      max-height: 420px;
+      overflow: auto;
+      border-radius: 6px;
+      padding: 12px;
+      background: #101820;
+      color: #e6edf3;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .span-7,
+      .span-5,
+      .span-6 {
+        grid-column: span 12;
+      }
+
+      .row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>kappa lab</h1>
+    <p>testes: missoes p data, retry de submissao, level up e paginacao</p>
+  </header>
+
+  <main>
+    <section class="span-12">
+      <h2>Conexao</h2>
+      <div class="row">
+        <div>
+          <label for="baseUrl">Base URL</label>
+          <input id="baseUrl" value="http://127.0.0.1:8000">
+        </div>
+        <div>
+          <label for="apiPrefix">API prefix</label>
+          <input id="apiPrefix" value="/api/v1">
+        </div>
+      </div>
+      <div class="actions">
+        <button data-action="health">Testar health</button>
+        <button class="secondary" data-action="save-config">Salvar config</button>
+        <button class="warn" data-action="clear-state">Limpar IDs locais</button>
+      </div>
+      <div id="statePills" style="margin-top:12px"></div>
+    </section>
+
+    <section class="span-5">
+      <h2>Aluno</h2>
+      <div class="row">
+        <div>
+          <label for="username">Username</label>
+          <input id="username" value="operative_lab">
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" value="operative_lab@test.local">
+        </div>
+      </div>
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" value="123456">
+      <label for="alunoId">Aluno ID</label>
+      <input id="alunoId" placeholder="Preenchido apos registro/login">
+      <div class="actions">
+        <button data-action="register-student">Registrar aluno</button>
+        <button class="secondary" data-action="login-student">Login</button>
+        <button class="secondary" data-action="get-student">Buscar aluno</button>
+      </div>
+    </section>
+
+    <section class="span-7">
+      <h2>Missoes</h2>
+      <div class="row">
+        <div>
+          <label for="missionXp">XP recompensa</label>
+          <input id="missionXp" type="number" min="1" value="5100">
+        </div>
+        <div>
+          <label for="missionDifficulty">Dificuldade</label>
+          <select id="missionDifficulty">
+            <option>EASY</option>
+            <option selected>MEDIUM</option>
+            <option>BOSS</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="missionOffset">Offset</label>
+          <input id="missionOffset" type="number" min="0" value="0">
+        </div>
+        <div>
+          <label for="missionLimit">Limit</label>
+          <input id="missionLimit" type="number" min="1" max="100" value="10">
+        </div>
+      </div>
+      <label for="missaoId">Missao ID ativa para submeter</label>
+      <input id="missaoId" placeholder="Preenchido ao criar missao ativa">
+      <div class="actions">
+        <button data-action="create-active-mission">Criar missao ativa</button>
+        <button data-action="create-expired-mission">Criar missao expirada</button>
+        <button class="secondary" data-action="list-missions">Listar missoes</button>
+        <button class="secondary" data-action="get-mission">Buscar missao ID</button>
+      </div>
+      <div id="missionsTable"></div>
+    </section>
+
+    <section class="span-7">
+      <h2>Submissao e retry</h2>
+      <label for="code">Codigo</label>
+      <textarea id="code">def validate():
+    return True</textarea>
+      <label for="submissaoId">Submissao ID</label>
+      <input id="submissaoId" placeholder="Preenchido depois da primeira submissao">
+      <div class="actions">
+        <button class="secondary" data-action="sample-success">Exemplo sucesso</button>
+        <button class="secondary" data-action="sample-fail-test">Exemplo falha teste</button>
+        <button class="secondary" data-action="sample-fail-compile">Exemplo falha compilacao</button>
+        <button data-action="submit-code">Submeter codigo</button>
+        <button class="secondary" data-action="get-submission">Buscar submissao</button>
+      </div>
+    </section>
+
+    <section class="span-5">
+      <h2>Ranking, dashboard e historico</h2>
+      <div class="row">
+        <div>
+          <label for="rankOffset">Offset ranking</label>
+          <input id="rankOffset" type="number" min="0" value="0">
+        </div>
+        <div>
+          <label for="rankLimit">Limit ranking</label>
+          <input id="rankLimit" type="number" min="1" max="100" value="10">
+        </div>
+      </div>
+      <div class="actions">
+        <button data-action="get-ranking">Ranking paginado</button>
+        <button class="secondary" data-action="get-dashboard">Dashboard</button>
+        <button class="secondary" data-action="list-submissions">Historico submissoes</button>
+      </div>
+      <p class="muted">Use o mesmo Aluno ID preenchido no card Aluno.</p>
+    </section>
+
+    <section class="span-12">
+      <h2>Resultado da ultima chamada</h2>
+      <pre id="output">Pronto. Suba o backend e clique em "Testar health".</pre>
+    </section>
+  </main>
+
+  <script>
+    const ids = [
+      "baseUrl", "apiPrefix", "username", "email", "senha", "alunoId",
+      "missaoId", "submissaoId", "missionXp", "missionDifficulty",
+      "missionOffset", "missionLimit", "rankOffset", "rankLimit"
+    ];
+
+    const $ = (id) => document.getElementById(id);
+
+    function loadState() {
+      ids.forEach((id) => {
+        const saved = localStorage.getItem("kappaLab." + id);
+        if (saved !== null) $(id).value = saved;
+      });
+      renderPills();
+    }
+
+    function saveState() {
+      ids.forEach((id) => localStorage.setItem("kappaLab." + id, $(id).value));
+      renderPills();
+    }
+
+    function clearState() {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("kappaLab."))
+        .forEach((key) => localStorage.removeItem(key));
+      $("alunoId").value = "";
+      $("missaoId").value = "";
+      $("submissaoId").value = "";
+      setOutput("IDs locais limpos.");
+      renderPills();
+    }
+
+    function api(path) {
+      return $("baseUrl").value.replace(/\/$/, "") + $("apiPrefix").value + path;
+    }
+
+    function setOutput(data) {
+      $("output").textContent = typeof data === "string"
+        ? data
+        : JSON.stringify(data, null, 2);
+    }
+
+    function decodeJwtSub(token) {
+      try {
+        const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const json = JSON.parse(atob(payload));
+        return json.sub || "";
+      } catch (_error) {
+        return "";
+      }
+    }
+
+    async function request(path, options = {}) {
+      const response = await fetch(path.startsWith("http") ? path : api(path), {
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+      const text = await response.text();
+      let body = text;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch (_error) {
+        body = text;
+      }
+      const result = { status: response.status, ok: response.ok, body };
+      setOutput(result);
+      if (!response.ok) throw result;
+      return body;
+    }
+
+    function isoMinutesFromNow(minutes) {
+      return new Date(Date.now() + minutes * 60 * 1000).toISOString();
+    }
+
+    function missionPayload(kind) {
+      const now = Date.now();
+      const suffix = new Date(now).toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+      const expired = kind === "expired";
+      return {
+        titulo: expired ? "Lab Expirada " + suffix : "Lab Ativa " + suffix,
+        descricao: "Missao criada pelo index.html de testes.",
+        dificuldade: $("missionDifficulty").value,
+        xp_recompensa: Number($("missionXp").value || 100),
+        agendar: true,
+        data_inicio: isoMinutesFromNow(-10),
+        deadline: expired ? isoMinutesFromNow(-1) : isoMinutesFromNow(60),
+        trilha_id: "LAB_TRACK",
+        ordem: expired ? 99 : 0
+      };
+    }
+
+    function renderPills() {
+      const aluno = $("alunoId").value || "sem aluno";
+      const missao = $("missaoId").value || "sem missao";
+      const submissao = $("submissaoId").value || "sem submissao";
+      $("statePills").innerHTML = `
+        <span class="pill ${$("alunoId").value ? "ok" : "warn"}">Aluno: ${aluno}</span>
+        <span class="pill ${$("missaoId").value ? "ok" : "warn"}">Missao: ${missao}</span>
+        <span class="pill ${$("submissaoId").value ? "ok" : "warn"}">Submissao: ${submissao}</span>
+      `;
+    }
+
+    function renderMissionsTable(data) {
+      if (!data || !Array.isArray(data.items)) {
+        $("missionsTable").innerHTML = "";
+        return;
+      }
+      const rows = data.items.map((m) => `
+        <tr>
+          <td><button class="secondary" data-pick-mission="${m.id}">Usar</button></td>
+          <td>${m.titulo}</td>
+          <td>${m.status}</td>
+          <td>${m.xp_recompensa}</td>
+          <td>${m.id}</td>
+        </tr>
+      `).join("");
+      $("missionsTable").innerHTML = `
+        <table>
+          <thead><tr><th></th><th>Titulo</th><th>Status</th><th>XP</th><th>ID</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="muted">Total: ${data.total} | offset: ${data.offset} | limit: ${data.limit}</p>
+      `;
+    }
+
+    async function health() {
+      const body = await request($("baseUrl").value.replace(/\/$/, "") + "/health");
+      return body;
+    }
+
+    async function registerStudent() {
+      const body = await request("/auth/registro/aluno", {
+        method: "POST",
+        body: JSON.stringify({
+          username: $("username").value,
+          email: $("email").value,
+          senha: $("senha").value
+        })
+      });
+      $("alunoId").value = decodeJwtSub(body.access_token);
+      saveState();
+    }
+
+    async function loginStudent() {
+      const body = await request("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: $("email").value, senha: $("senha").value })
+      });
+      $("alunoId").value = decodeJwtSub(body.access_token);
+      saveState();
+    }
+
+    async function createMission(kind) {
+      const body = await request("/missoes", {
+        method: "POST",
+        body: JSON.stringify(missionPayload(kind))
+      });
+      if (kind !== "expired") $("missaoId").value = body.id;
+      saveState();
+      await listMissions();
+    }
+
+    async function listMissions() {
+      const offset = Number($("missionOffset").value || 0);
+      const limit = Number($("missionLimit").value || 10);
+      const body = await request(`/missoes?offset=${offset}&limit=${limit}&trilha_id=LAB_TRACK`);
+      renderMissionsTable(body);
+    }
+
+    async function submitCode() {
+      const alunoId = $("alunoId").value.trim();
+      const missaoId = $("missaoId").value.trim();
+      if (!alunoId || !missaoId) {
+        setOutput("Preencha Aluno ID e Missao ID antes de submeter.");
+        return;
+      }
+      const submissaoId = $("submissaoId").value.trim();
+      const payload = { conteudo_codigo: $("code").value };
+      if (submissaoId) payload.submissao_id = submissaoId;
+      const body = await request(`/missoes/${missaoId}/submeter?aluno_id=${alunoId}`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      $("submissaoId").value = body.submissao_id;
+      saveState();
+    }
+
+    async function runAction(action) {
+      try {
+        if (action === "health") await health();
+        if (action === "save-config") { saveState(); setOutput("Config salva."); }
+        if (action === "clear-state") clearState();
+        if (action === "register-student") await registerStudent();
+        if (action === "login-student") await loginStudent();
+        if (action === "get-student") await request(`/alunos/${$("alunoId").value}`);
+        if (action === "create-active-mission") await createMission("active");
+        if (action === "create-expired-mission") await createMission("expired");
+        if (action === "list-missions") await listMissions();
+        if (action === "get-mission") await request(`/missoes/${$("missaoId").value}`);
+        if (action === "sample-success") $("code").value = "def validate():\n    return True";
+        if (action === "sample-fail-test") $("code").value = "def validate():\n    return 'FAIL_TEST'";
+        if (action === "sample-fail-compile") $("code").value = "raise SyntaxError('boom')";
+        if (action === "submit-code") await submitCode();
+        if (action === "get-submission") await request(`/submissoes/${$("submissaoId").value}`);
+        if (action === "get-ranking") {
+          await request(`/alunos/ranking?offset=${$("rankOffset").value}&limit=${$("rankLimit").value}`);
+        }
+        if (action === "get-dashboard") {
+          await request(`/alunos/${$("alunoId").value}/dashboard?trilha_id=LAB_TRACK`);
+        }
+        if (action === "list-submissions") {
+          await request(`/alunos/${$("alunoId").value}/submissoes?offset=0&limit=20`);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        saveState();
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      const action = event.target.getAttribute("data-action");
+      if (action) runAction(action);
+
+      const missionId = event.target.getAttribute("data-pick-mission");
+      if (missionId) {
+        $("missaoId").value = missionId;
+        saveState();
+      }
+    });
+
+    loadState();
+  </script>
+</body>
+</html>
