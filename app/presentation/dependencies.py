@@ -11,7 +11,9 @@ from app.application.use_cases.criar_missao import CriarMissaoUseCase
 from app.application.use_cases.obter_dashboard_aluno import ObterDashboardAlunoUseCase
 from app.application.use_cases.processar_evolucao import ProcessarEvolucaoUseCase
 from app.application.use_cases.submeter_codigo import SubmeterCodigoUseCase
-from app.domain.entities import Aluno
+from app.domain.entities import Aluno, Usuario
+from app.domain.enums import PerfilUsuario
+from app.infrastructure.database.models import UsuarioModel
 from app.infrastructure.database.unit_of_work import SqlAlchemyTransactionManager
 from app.infrastructure.integrations.mock_engine_ia import MockEngineIA
 from app.infrastructure.repositories.sqlalchemy_aluno_repository import (
@@ -52,8 +54,6 @@ def _use_case_factory(factory: Callable[[Session], T]) -> Callable[[Session], T]
     return _dependency
 
 
-# ── Repositórios diretos ───────────────────────────────────────────────────────
-
 def get_aluno_repo(db: Session = Depends(get_db)) -> SqlAlchemyAlunoRepository:
     return SqlAlchemyAlunoRepository(db)
 
@@ -78,42 +78,97 @@ def get_professor_repo(db: Session = Depends(get_db)) -> SqlAlchemyProfessorRepo
     return SqlAlchemyProfessorRepository(db)
 
 
-# ── Auth ───────────────────────────────────────────────────────────────────────
+def _unauthorized(detail: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
-def get_current_aluno(
+
+def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
     db: Session = Depends(get_db),
-) -> Aluno:
+) -> Usuario:
     payload = decode_token(credentials.credentials)
     if payload is None or payload.get("type") != "access":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido ou expirado",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise _unauthorized("Token invalido ou expirado")
+
     sub = payload.get("sub")
     if not sub:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token malformado",
-        )
+        raise _unauthorized("Token malformado")
+
     try:
-        aluno_id = UUID(sub)
+        user_id = UUID(sub)
     except ValueError:
+        raise _unauthorized("Token malformado")
+
+    model = db.get(UsuarioModel, user_id)
+    if model is None:
+        raise _unauthorized("Usuario nao encontrado")
+
+    return Usuario(
+        id=model.id,
+        username=model.username,
+        email=model.email,
+        senha_hash=model.senha_hash,
+        perfil=model.perfil,
+    )
+
+
+def require_perfil(*perfis: PerfilUsuario) -> Callable[[Usuario], Usuario]:
+    allowed = set(perfis)
+
+    def _dependency(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+        if current_user.perfil not in allowed:
+            perfis_permitidos = ", ".join(perfil.value for perfil in perfis)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Perfil nao autorizado. Requer: {perfis_permitidos}",
+            )
+        return current_user
+
+    return _dependency
+
+
+def require_aluno_owner(
+    aluno_id: UUID,
+    current_user: Usuario = Depends(require_perfil(PerfilUsuario.ALUNO)),
+) -> Usuario:
+    if current_user.id != aluno_id:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token malformado",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Aluno so pode acessar seus proprios dados",
         )
-    aluno = SqlAlchemyAlunoRepository(db).obter_por_id(aluno_id)
+    return current_user
+
+
+def require_aluno_owner_or_staff(
+    aluno_id: UUID,
+    current_user: Usuario = Depends(get_current_user),
+) -> Usuario:
+    if current_user.perfil in {PerfilUsuario.PROFESSOR, PerfilUsuario.GESTOR}:
+        return current_user
+    if current_user.perfil == PerfilUsuario.ALUNO and current_user.id == aluno_id:
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Aluno so pode acessar seus proprios dados",
+    )
+
+
+def get_current_aluno(
+    current_user: Usuario = Depends(require_perfil(PerfilUsuario.ALUNO)),
+    db: Session = Depends(get_db),
+) -> Aluno:
+    aluno = SqlAlchemyAlunoRepository(db).obter_por_id(current_user.id)
     if aluno is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuário não encontrado",
+            detail="Usuario nao encontrado",
         )
     return aluno
 
-
-# ── Use cases ─────────────────────────────────────────────────────────────────
 
 def get_obter_dashboard_use_case(
     db: Session = Depends(get_db),

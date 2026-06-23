@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.application.dto import DashboardAlunoDTO
 from app.application.use_cases.obter_dashboard_aluno import ObterDashboardAlunoUseCase
+from app.domain.entities import Usuario
+from app.domain.enums import PerfilUsuario
 from app.domain.exceptions import DomainError, EntityNotFoundError
 from app.infrastructure.repositories.sqlalchemy_aluno_repository import (
     SqlAlchemyAlunoRepository,
@@ -23,6 +25,9 @@ from app.presentation.dependencies import (
     get_obter_dashboard_use_case,
     get_ranking_repo,
     get_submissao_repo,
+    require_aluno_owner,
+    require_aluno_owner_or_staff,
+    require_perfil,
 )
 from app.presentation.schemas.aluno import (
     AlunoListResponse,
@@ -36,6 +41,7 @@ from app.presentation.schemas.aluno import (
 from app.presentation.schemas.submissao import SubmissaoDetailResponse, SubmissaoListResponse
 
 router = APIRouter(prefix="/alunos", tags=["Alunos"])
+ranking_router = APIRouter(tags=["Ranking"])
 
 
 def _map_dashboard(dto: DashboardAlunoDTO) -> DashboardAlunoResponse:
@@ -86,6 +92,9 @@ def _map_dashboard(dto: DashboardAlunoDTO) -> DashboardAlunoResponse:
 def listar_alunos(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    _current_user: Usuario = Depends(
+        require_perfil(PerfilUsuario.PROFESSOR, PerfilUsuario.GESTOR)
+    ),
     repo: SqlAlchemyAlunoRepository = Depends(get_aluno_repo),
 ) -> AlunoListResponse:
     alunos, total = repo.listar(offset=offset, limit=limit)
@@ -109,6 +118,11 @@ def listar_alunos(
 
 
 @router.get(
+    "/ranking",
+    response_model=RankingResponse,
+    summary="Ranking global de alunos",
+)
+@ranking_router.get(
     "/ranking",
     response_model=RankingResponse,
     summary="Ranking global de alunos",
@@ -142,6 +156,7 @@ def obter_ranking(
 )
 def obter_aluno(
     aluno_id: UUID,
+    _current_user: Usuario = Depends(require_aluno_owner_or_staff),
     repo: SqlAlchemyAlunoRepository = Depends(get_aluno_repo),
 ) -> AlunoResponse:
     aluno = repo.obter_por_id(aluno_id)
@@ -171,6 +186,7 @@ def obter_dashboard_aluno(
     trilha_id: str | None = Query(
         default=None, description="ID da trilha (ex: STARTER_PACK_TRACK)"
     ),
+    _current_user: Usuario = Depends(require_aluno_owner),
     use_case: ObterDashboardAlunoUseCase = Depends(get_obter_dashboard_use_case),
 ) -> DashboardAlunoResponse:
     try:
@@ -193,6 +209,7 @@ def obter_dashboard_aluno(
 )
 def listar_badges_aluno(
     aluno_id: UUID,
+    _current_user: Usuario = Depends(require_aluno_owner_or_staff),
     repo: SqlAlchemyBadgeRepository = Depends(get_badge_repo),
 ) -> list[BadgeResponse]:
     pares = repo.listar_badges_detalhes(aluno_id)
@@ -218,6 +235,7 @@ def listar_submissoes_aluno(
     aluno_id: UUID,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    _current_user: Usuario = Depends(require_aluno_owner_or_staff),
     repo: SqlAlchemySubmissaoRepository = Depends(get_submissao_repo),
 ) -> SubmissaoListResponse:
     submissoes, total = repo.listar_por_aluno(aluno_id, offset=offset, limit=limit)

@@ -9,6 +9,11 @@ class SubmeterCodigoRequest(BaseModel):
     submissao_id: UUID | None = None
 
 
+class AvaliarSubmissaoRequest(BaseModel):
+    nota: float
+    feedback: str = Field(..., min_length=1)
+
+
 class SubmissaoResultadoResponse(BaseModel):
     submissao_id: UUID
     status: str

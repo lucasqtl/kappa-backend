@@ -27,9 +27,6 @@ class AvaliarSubmissaoUseCase:
         if submissao is None:
             raise EntityNotFoundError(f"Submissão {submissao_id} não encontrada")
 
-        if not 0.0 <= nota <= 10.0:
-            raise ValueError("Nota deve estar entre 0 e 10")
-
         correcao = Correcao(
             id=uuid4(),
             submissao_id=submissao_id,

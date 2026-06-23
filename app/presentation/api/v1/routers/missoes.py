@@ -11,7 +11,8 @@ from app.domain.exceptions import (
     InvalidStateTransitionError,
     UnauthorizedActionError,
 )
-from app.domain.enums import DificuldadeMissao, StatusMissao
+from app.domain.entities import Usuario
+from app.domain.enums import DificuldadeMissao, PerfilUsuario, StatusMissao
 from app.infrastructure.repositories.sqlalchemy_missao_repository import (
     SqlAlchemyMissaoRepository,
 )
@@ -20,6 +21,7 @@ from app.presentation.dependencies import (
     get_criar_missao_use_case,
     get_missao_repo,
     get_submeter_codigo_use_case,
+    require_perfil,
 )
 from app.presentation.schemas.missao import (
     AtualizarMissaoRequest,
@@ -29,6 +31,7 @@ from app.presentation.schemas.missao import (
     PatchMissaoStatusRequest,
 )
 from app.presentation.schemas.submissao import (
+    AvaliarSubmissaoRequest,
     SubmissaoResultadoResponse,
     SubmeterCodigoRequest,
 )
@@ -60,6 +63,9 @@ def _map_missao(missao) -> MissaoResponse:
 )
 def criar_missao(
     body: CriarMissaoRequest,
+    _current_user: Usuario = Depends(
+        require_perfil(PerfilUsuario.PROFESSOR, PerfilUsuario.GESTOR)
+    ),
     use_case: CriarMissaoUseCase = Depends(get_criar_missao_use_case),
 ) -> MissaoResponse:
     missao = use_case.executar(
@@ -131,6 +137,9 @@ def obter_missao(
 def atualizar_missao(
     missao_id: UUID,
     body: AtualizarMissaoRequest,
+    _current_user: Usuario = Depends(
+        require_perfil(PerfilUsuario.PROFESSOR, PerfilUsuario.GESTOR)
+    ),
     repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
 ) -> MissaoResponse:
     missao = repo.obter_por_id(missao_id)
@@ -138,6 +147,11 @@ def atualizar_missao(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Missão não encontrada",
+        )
+    if missao.status not in {StatusMissao.EM_RASCUNHO, StatusMissao.AGENDADA}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Missao so pode ser editada em rascunho ou agendada",
         )
     if body.titulo is not None:
         missao.titulo = body.titulo
@@ -169,6 +183,9 @@ def atualizar_missao(
 def alterar_status_missao(
     missao_id: UUID,
     body: PatchMissaoStatusRequest,
+    _current_user: Usuario = Depends(
+        require_perfil(PerfilUsuario.PROFESSOR, PerfilUsuario.GESTOR)
+    ),
     repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
 ) -> MissaoResponse:
     missao = repo.obter_por_id(missao_id)
@@ -195,6 +212,7 @@ def alterar_status_missao(
 )
 def deletar_missao(
     missao_id: UUID,
+    _current_user: Usuario = Depends(require_perfil(PerfilUsuario.GESTOR)),
     repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
 ) -> None:
     missao = repo.obter_por_id(missao_id)
@@ -202,6 +220,11 @@ def deletar_missao(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Missão não encontrada",
+        )
+    if missao.status != StatusMissao.EM_RASCUNHO:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Missao so pode ser deletada em rascunho",
         )
     repo.deletar(missao_id)
 
@@ -215,8 +238,14 @@ def submeter_codigo(
     missao_id: UUID,
     aluno_id: UUID,
     body: SubmeterCodigoRequest,
+    current_user: Usuario = Depends(require_perfil(PerfilUsuario.ALUNO)),
     use_case: SubmeterCodigoUseCase = Depends(get_submeter_codigo_use_case),
 ) -> SubmissaoResultadoResponse:
+    if current_user.id != aluno_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Aluno so pode submeter codigo para si proprio",
+        )
     try:
         resultado = use_case.executar(
             aluno_id=aluno_id,
@@ -257,17 +286,16 @@ def submeter_codigo(
 )
 def avaliar_submissao(
     submissao_id: UUID,
-    professor_id: UUID,
-    nota: float,
-    feedback: str,
+    body: AvaliarSubmissaoRequest,
+    current_user: Usuario = Depends(require_perfil(PerfilUsuario.PROFESSOR)),
     use_case: AvaliarSubmissaoUseCase = Depends(get_avaliar_submissao_use_case),
 ) -> dict[str, str | float]:
     try:
         correcao = use_case.executar(
             submissao_id=submissao_id,
-            professor_id=professor_id,
-            nota=nota,
-            feedback=feedback,
+            professor_id=current_user.id,
+            nota=body.nota,
+            feedback=body.feedback,
         )
         return {
             "correcao_id": str(correcao.id),
@@ -278,7 +306,7 @@ def avaliar_submissao(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
         ) from exc
-    except ValueError as exc:
+    except DomainError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
