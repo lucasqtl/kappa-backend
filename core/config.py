@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     xp_por_nivel: int = 5000
 
+    # Judge0 — deixe em branco para usar o MockEngineIA (desenvolvimento)
+    judge0_base_url: str = ""
+    judge0_api_key: str = ""
+    judge0_language_id: int = 71  # 71 = Python 3
+
     @property
     def cors_origins(self) -> list[str]:
         if self.debug:
