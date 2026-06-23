@@ -99,6 +99,20 @@ class FakeDashboardUseCase:
         )
 
 
+class FakeSubmeterCodigoUseCase:
+    def executar(self, aluno_id, missao_id, conteudo_codigo, submissao_id=None):
+        from app.application.dto import SubmissaoResultadoDTO
+
+        return SubmissaoResultadoDTO(
+            submissao_id=uuid4(),
+            status="FINALIZADA",
+            xp_ganho=100,
+            level_up=False,
+            novo_nivel=None,
+            mensagem="Todos os testes passaram.",
+        )
+
+
 class FakeAvaliarSubmissaoUseCase:
     def __init__(self) -> None:
         self.professor_id: UUID | None = None
@@ -252,6 +266,45 @@ def test_avaliacao_rejeita_nota_invalida(client: TestClient) -> None:
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Nota deve estar entre 0 e 10"
+
+
+def test_obter_missao_nao_encontrada_retorna_404(client: TestClient) -> None:
+    _autenticar_com(PROFESSOR)
+    app.dependency_overrides[dependencies.get_missao_repo] = lambda: FakeMissaoRepo()
+
+    response = client.get(f"/api/v1/missoes/{uuid4()}")
+
+    assert response.status_code == 404
+
+
+def test_alterar_status_transicao_invalida_retorna_409(client: TestClient) -> None:
+    _autenticar_com(PROFESSOR)
+    repo = FakeMissaoRepo(_missao(StatusMissao.EM_RASCUNHO))
+    app.dependency_overrides[dependencies.get_missao_repo] = lambda: repo
+
+    response = client.patch(
+        f"/api/v1/missoes/{MISSAO_ID}/status",
+        json={"novo_status": "EXPIRADA"},
+    )
+
+    assert response.status_code == 409
+
+
+def test_aluno_submete_codigo_para_missao(client: TestClient) -> None:
+    _autenticar_com(ALUNO)
+    app.dependency_overrides[dependencies.get_submeter_codigo_use_case] = (
+        lambda: FakeSubmeterCodigoUseCase()
+    )
+
+    response = client.post(
+        f"/api/v1/missoes/{MISSAO_ID}/submeter",
+        params={"aluno_id": str(ALUNO_ID)},
+        json={"conteudo_codigo": "print('hello')"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "FINALIZADA"
+    assert response.json()["xp_ganho"] == 100
 
 
 def test_cors_permite_wildcard_em_debug() -> None:

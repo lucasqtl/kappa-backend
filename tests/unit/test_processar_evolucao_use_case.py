@@ -85,6 +85,58 @@ def test_level_up_quando_ultrapassa_threshold_sem_multiplo_exato() -> None:
     assert aluno_atualizado.nivel == 2
 
 
+def test_sem_level_up_quando_xp_insuficiente() -> None:
+    aluno = _aluno(xp_total=100, nivel=1)
+    missao = _missao(xp_recompensa=100)
+    use_case = ProcessarEvolucaoUseCase(
+        FakeAlunoRepo(aluno),
+        FakeMissaoRepo(missao),
+        FakeBadgeRepo(),
+        FakeRankingRepo(),
+    )
+
+    aluno_atualizado, xp_ganho, level_up = use_case.executar(aluno.id, missao.id)
+
+    assert xp_ganho == 100
+    assert level_up is False
+    assert aluno_atualizado.nivel == 1
+
+
+def test_level_up_exato_no_threshold() -> None:
+    aluno = _aluno(xp_total=4900, nivel=1)
+    missao = _missao(xp_recompensa=100)
+    use_case = ProcessarEvolucaoUseCase(
+        FakeAlunoRepo(aluno),
+        FakeMissaoRepo(missao),
+        FakeBadgeRepo(),
+        FakeRankingRepo(),
+    )
+
+    aluno_atualizado, xp_ganho, level_up = use_case.executar(aluno.id, missao.id)
+
+    assert aluno_atualizado.xp_total == 5000
+    assert level_up is True
+    assert aluno_atualizado.nivel == 2
+
+
+def test_concede_badge_nova() -> None:
+    badge_id = uuid4()
+    aluno = _aluno(xp_total=0)
+    missao = _missao(xp_recompensa=50, badge_id=badge_id)
+    badge_repo = FakeBadgeRepo()
+    use_case = ProcessarEvolucaoUseCase(
+        FakeAlunoRepo(aluno),
+        FakeMissaoRepo(missao),
+        badge_repo,
+        FakeRankingRepo(),
+    )
+
+    use_case.executar(aluno.id, missao.id)
+
+    assert len(badge_repo.conquistadas) == 1
+    assert badge_repo.conquistadas[0].badge_id == badge_id
+
+
 def test_nao_concede_badge_repetida() -> None:
     badge_id = uuid4()
     aluno = _aluno(xp_total=0)

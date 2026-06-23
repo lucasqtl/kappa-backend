@@ -19,6 +19,7 @@ from app.infrastructure.repositories.sqlalchemy_missao_repository import (
 from app.presentation.dependencies import (
     get_avaliar_submissao_use_case,
     get_criar_missao_use_case,
+    get_current_user,
     get_missao_repo,
     get_submeter_codigo_use_case,
     require_perfil,
@@ -94,6 +95,7 @@ def listar_missoes(
     trilha_id: str | None = Query(default=None),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
+    _current_user: Usuario = Depends(get_current_user),
     repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
 ) -> MissaoListResponse:
     missoes, total = repo.listar_todas(
@@ -118,6 +120,7 @@ def listar_missoes(
 )
 def obter_missao(
     missao_id: UUID,
+    _current_user: Usuario = Depends(get_current_user),
     repo: SqlAlchemyMissaoRepository = Depends(get_missao_repo),
 ) -> MissaoResponse:
     missao = repo.obter_por_id(missao_id)

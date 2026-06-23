@@ -4,7 +4,7 @@ import pytest
 
 from app.application.use_cases.avaliar_submissao import AvaliarSubmissaoUseCase
 from app.domain.entities import Correcao, Submissao
-from app.domain.exceptions import DomainError
+from app.domain.exceptions import DomainError, EntityNotFoundError
 
 
 class FakeSubmissaoRepo:
@@ -72,3 +72,18 @@ def test_rejeita_nota_fora_do_intervalo_no_dominio() -> None:
         )
 
     assert correcao_repo.salvas == []
+
+
+def test_rejeita_submissao_inexistente() -> None:
+    use_case = AvaliarSubmissaoUseCase(
+        submissao_repo=FakeSubmissaoRepo(None),
+        correcao_repo=FakeCorrecaoRepo(),
+    )
+
+    with pytest.raises(EntityNotFoundError):
+        use_case.executar(
+            submissao_id=uuid4(),
+            professor_id=uuid4(),
+            nota=7.0,
+            feedback="Submissão não existe.",
+        )

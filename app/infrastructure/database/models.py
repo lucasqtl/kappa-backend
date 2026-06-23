@@ -1,8 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.enums import (
@@ -18,7 +17,7 @@ class UsuarioModel(Base):
     __tablename__ = "usuarios"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -37,7 +36,7 @@ class AlunoModel(Base):
     __tablename__ = "alunos"
 
     usuario_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("usuarios.id", ondelete="CASCADE"),
         primary_key=True,
     )
@@ -53,7 +52,7 @@ class MissaoModel(Base):
     __tablename__ = "missoes"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     titulo: Mapped[str] = mapped_column(String(255), nullable=False)
     descricao: Mapped[str] = mapped_column(Text, nullable=False)
@@ -62,7 +61,7 @@ class MissaoModel(Base):
     )
     xp_recompensa: Mapped[int] = mapped_column(Integer, nullable=False)
     badge_id_recompensa: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("badges.id"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("badges.id"), nullable=True
     )
     data_inicio: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -77,13 +76,13 @@ class SubmissaoModel(Base):
     __tablename__ = "submissoes"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     aluno_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("alunos.usuario_id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("alunos.usuario_id"), nullable=False
     )
     missao_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("missoes.id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("missoes.id"), nullable=False
     )
     conteudo_codigo: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[StatusSubmissao] = mapped_column(
@@ -101,13 +100,13 @@ class CorrecaoModel(Base):
     __tablename__ = "correcoes"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     submissao_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("submissoes.id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("submissoes.id"), nullable=False
     )
     professor_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("usuarios.id"), nullable=False
     )
     nota: Mapped[float] = mapped_column(Float, nullable=False)
     feedback: Mapped[str] = mapped_column(Text, nullable=False)
@@ -120,7 +119,7 @@ class BadgeModel(Base):
     __tablename__ = "badges"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     codigo: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     nome: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -132,13 +131,13 @@ class BadgeConquistadaModel(Base):
     __tablename__ = "badges_conquistadas"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     aluno_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("alunos.usuario_id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("alunos.usuario_id"), nullable=False
     )
     badge_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("badges.id"), nullable=False
+        Uuid(as_uuid=True), ForeignKey("badges.id"), nullable=False
     )
     conquistado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow

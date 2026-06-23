@@ -11,7 +11,7 @@ from app.application.use_cases.criar_missao import CriarMissaoUseCase
 from app.application.use_cases.obter_dashboard_aluno import ObterDashboardAlunoUseCase
 from app.application.use_cases.processar_evolucao import ProcessarEvolucaoUseCase
 from app.application.use_cases.submeter_codigo import SubmeterCodigoUseCase
-from app.domain.entities import Aluno, Usuario
+from app.domain.entities import Usuario
 from app.domain.enums import PerfilUsuario
 from app.infrastructure.database.models import UsuarioModel
 from app.infrastructure.database.unit_of_work import SqlAlchemyTransactionManager
@@ -155,19 +155,6 @@ def require_aluno_owner_or_staff(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Aluno so pode acessar seus proprios dados",
     )
-
-
-def get_current_aluno(
-    current_user: Usuario = Depends(require_perfil(PerfilUsuario.ALUNO)),
-    db: Session = Depends(get_db),
-) -> Aluno:
-    aluno = SqlAlchemyAlunoRepository(db).obter_por_id(current_user.id)
-    if aluno is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario nao encontrado",
-        )
-    return aluno
 
 
 def get_obter_dashboard_use_case(
