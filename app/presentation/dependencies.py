@@ -15,6 +15,7 @@ from app.domain.entities import Usuario
 from app.domain.enums import PerfilUsuario
 from app.infrastructure.database.models import UsuarioModel
 from app.infrastructure.database.unit_of_work import SqlAlchemyTransactionManager
+from app.application.ports.engine_ia import EngineIA
 from app.infrastructure.integrations.mock_engine_ia import MockEngineIA
 from app.infrastructure.repositories.sqlalchemy_aluno_repository import (
     SqlAlchemyAlunoRepository,
@@ -40,11 +41,25 @@ from app.infrastructure.repositories.sqlalchemy_ranking_repository import (
 from app.infrastructure.repositories.sqlalchemy_submissao_repository import (
     SqlAlchemySubmissaoRepository,
 )
+from core.config import get_settings
 from core.database import get_db
 from core.security import decode_token
 
 T = TypeVar("T")
 _bearer = HTTPBearer()
+
+
+def _build_engine_ia() -> EngineIA:
+    settings = get_settings()
+    if settings.judge0_base_url:
+        from app.infrastructure.integrations.judge0_engine_ia import Judge0EngineIA
+
+        return Judge0EngineIA(
+            base_url=settings.judge0_base_url,
+            api_key=settings.judge0_api_key,
+            language_id=settings.judge0_language_id,
+        )
+    return MockEngineIA()
 
 
 def _use_case_factory(factory: Callable[[Session], T]) -> Callable[[Session], T]:
@@ -185,7 +200,7 @@ def get_submeter_codigo_use_case(
         aluno_repo=aluno_repo,
         missao_repo=missao_repo,
         submissao_repo=submissao_repo,
-        engine_ia=MockEngineIA(),
+        engine_ia=_build_engine_ia(),
         processar_evolucao=processar_evolucao,
         transaction_manager=SqlAlchemyTransactionManager(db),
     )
